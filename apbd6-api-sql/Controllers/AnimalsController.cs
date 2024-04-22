@@ -18,6 +18,11 @@ public class AnimalsController : ControllerBase
         _configuration = configuration;
     }
     
+    // public string GetConnectionString()
+    // {
+    //     return _configuration.GetConnectionString("LocalDB");
+    // }
+    
     
     // get all - api/animals?orderBy=name
     [HttpGet]
@@ -79,7 +84,7 @@ public class AnimalsController : ControllerBase
 
     // add new - api/animals
     [HttpPost]
-    public IActionResult AddAnimal(AddAnimal newAnimal)
+    public IActionResult AddAnimal([FromBody] AddAnimal newAnimal) // [FromBody] - data from json
     {
         // Uruchamiamy połączenie do bazy
         using SqlConnection connection = new SqlConnection(_configuration.GetConnectionString("Default"));
@@ -89,24 +94,24 @@ public class AnimalsController : ControllerBase
         using SqlCommand command = new SqlCommand();
         command.Connection = connection;
         command.CommandText = "INSERT INTO Animal VALUES(@animalName,@animalDescription,@animalCategory,@animalArea)";
-        command.Parameters.AddWithValue("@idAnimal", newAnimal.IdAnimal);
         command.Parameters.AddWithValue("@animalName", newAnimal.Name);
         command.Parameters.AddWithValue("@animalDescription", newAnimal.Description);
         command.Parameters.AddWithValue("@animalCategory", newAnimal.Category);
         command.Parameters.AddWithValue("@animalArea", newAnimal.Area);
-        
+    
         // Wykonanie commanda
         command.ExecuteNonQuery();
 
         //_repository.AddAnimal(addAnimal);
-        
+    
         return Created("", null);
     }
+
     
     
     // update - /api/animals/{idAnimal}
     [HttpPut("{idAnimal}")]
-    public IActionResult UpdateAnimal(AddAnimal newAnimal)
+    public IActionResult UpdateAnimal([FromBody] AddAnimal newAnimal) // [FromBody] - data from json
     {
         // Uruchamiamy połączenie do bazy
         using SqlConnection connection = new SqlConnection(_configuration.GetConnectionString("Default"));
