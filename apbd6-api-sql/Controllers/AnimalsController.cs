@@ -26,7 +26,8 @@ public class AnimalsController : ControllerBase
     
     // get all - api/animals?orderBy=name
     [HttpGet]
-    public IActionResult GetAnimals([FromQuery] string orderBy)
+    // orderBy is optional, default is Name
+    public IActionResult GetAnimals([FromQuery] string orderBy = "Name")
     {
         // Uruchamiamy połączenie do bazy
         using SqlConnection connection = new SqlConnection(_configuration.GetConnectionString("Default"));
@@ -36,21 +37,14 @@ public class AnimalsController : ControllerBase
         using SqlCommand command = new SqlCommand();
         command.Connection = connection;
         
-        // Konstruujemy zapytanie SQL w zależności od parametru orderBy
-        command.CommandText = "";
-        
-        // sort by name if orderBy is not provided
-        if (orderBy.IsNullOrEmpty()) {
-            command.CommandText = "SELECT * FROM Animal ORDER BY Name ASC";
-        }
-        else if (orderBy is "Name" or "Description" or "Category" or "Area")
-        {
-            command.CommandText = "SELECT * FROM Animal ORDER BY " + orderBy + " ASC";
-        }
-        else
+        // Check if orderBy is a valid field, if not, return BadRequest
+        if (!(orderBy is "Name" or "Description" or "Category" or "Area"))
         {
             return BadRequest("Invalid orderBy parameter");
         }
+
+        // Konstruujemy zapytanie SQL w zależności od parametru orderBy
+        command.CommandText = $"SELECT * FROM Animal ORDER BY {orderBy} ASC";
 
         
         // Uruchomienie zapytania
@@ -103,15 +97,26 @@ public class AnimalsController : ControllerBase
         command.ExecuteNonQuery();
 
         //_repository.AddAnimal(addAnimal);
+        
+        int rowsAffected = command.ExecuteNonQuery();
+        
+        if (rowsAffected > 0)
+        {
+            return Ok("Animal added successfully");
+        }
+        else
+        {
+            return BadRequest("Animal not added");
+        }
     
-        return Created("", null);
     }
 
     
     
     // update - /api/animals/{idAnimal}
-    [HttpPut("{idAnimal}")]
-    public IActionResult UpdateAnimal([FromBody] AddAnimal newAnimal) // [FromBody] - data from json
+    // [HttpPut("{idAnimal}")] // path: /1
+    [HttpPut] 
+    public IActionResult UpdateAnimal([FromBody] AddAnimal updatedAnimal, int id) // [FromBody] - data from json
     {
         // Uruchamiamy połączenie do bazy
         using SqlConnection connection = new SqlConnection(_configuration.GetConnectionString("Default"));
@@ -120,25 +125,38 @@ public class AnimalsController : ControllerBase
         // Definiujemy command
         using SqlCommand command = new SqlCommand();
         command.Connection = connection;
-        command.CommandText = "UPDATE Animal SET Name = @animalName, Description = @animalDescription, Category = @animalCategory, Area = @animalArea WHERE IdAnimal = @idAnimal";
-        command.Parameters.AddWithValue("@idAnimal", newAnimal.IdAnimal);
-        command.Parameters.AddWithValue("@animalName", newAnimal.Name);
-        command.Parameters.AddWithValue("@animalDescription", newAnimal.Description);
-        command.Parameters.AddWithValue("@animalCategory", newAnimal.Category);
-        command.Parameters.AddWithValue("@animalArea", newAnimal.Area);
+        command.CommandText = $"UPDATE Animal SET Name = @animalName, Description = @animalDescription, Category = @animalCategory, Area = @animalArea WHERE IdAnimal = {id}";
+        
+        // jak nie wymagać podawania idAnimal w jsonie?
+        // command.Parameters.AddWithValue("@idAnimal", newAnimal.IdAnimal);
+        command.Parameters.AddWithValue("@animalName", updatedAnimal.Name);
+        command.Parameters.AddWithValue("@animalDescription", updatedAnimal.Description);
+        command.Parameters.AddWithValue("@animalCategory", updatedAnimal.Category);
+        command.Parameters.AddWithValue("@animalArea", updatedAnimal.Area);
         
         // Wykonanie commanda
         command.ExecuteNonQuery();
 
         //_repository.UpdateAnimal(addAnimal);
         
-        return Created();
+        // Execute the query
+        int rowsAffected = command.ExecuteNonQuery();
+
+        if (rowsAffected > 0)
+        {
+            return Ok("Animal updated successfully");
+        }
+        else
+        {
+            return NotFound("Animal not found");
+        }
     }
     
     
     // delete - /api/animals/{idAnimal}
-    [HttpDelete("{idAnimal}")]
-    public IActionResult DeleteAnimal(int id)
+    // [HttpDelete("{idAnimal}")] // path: /1
+    [HttpDelete]
+    public IActionResult DeleteAnimal(int id) // query: ?id=1
     {
         // Uruchamiamy połączenie do bazy
         using SqlConnection connection = new SqlConnection(_configuration.GetConnectionString("Default"));
@@ -155,6 +173,19 @@ public class AnimalsController : ControllerBase
 
         //_repository.DeleteAnimal(id);
         
-        return Ok();
+        int rowsAffected = command.ExecuteNonQuery();
+        
+        if (rowsAffected >= 0)
+        {
+            return Ok("Animal deleted successfully");
+        }
+        else
+        {
+            return NotFound();
+        }
     }
+    
+    
+    
+    
 }
